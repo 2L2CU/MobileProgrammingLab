@@ -1,54 +1,60 @@
 package com.example.startedservice;
 
-import android.app.IntentService;
+import android.app.Service;
 import android.content.Intent;
 import android.os.Binder;
-import android.os.Handler;
+import android.os.IBinder;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 
-public class MyService extends IntentService {
+import java.util.Timer;
+import java.util.TimerTask;
 
-    private Handler handler;
-    private Binder binder = new Binder();
 
-    public MyService() {
-        super("BackgroundCounter");
+public class MyService extends Service {
+
+    private final IBinder binder = new MyBinder(); //for user to communicate
+    IncrementTask incrementTask;
+    private int baseCounter = 0;
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        Toast.makeText(getApplicationContext(), "Your bound service has been started", Toast.LENGTH_SHORT).show();
+        incrementTask = new IncrementTask(baseCounter);
+        return binder;
     }
 
-    @Override
-    protected void onHandleIntent(@androidx.annotation.Nullable Intent intent) {
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(getApplicationContext(), "Your service has been started", Toast.LENGTH_SHORT).show();
-            }
-        });
+    //client method
+    public String getCounter() {
+        return String.valueOf(incrementTask.getInnerCounter());
+    }
 
-        for (int i = 0; i < 6; i++) {
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            makeControlToast();
+    public class MyBinder extends Binder { //makes <access-public-methods> object for client
+
+        MyService getService() {
+            return MyService.this;
         }
     }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        handler = new Handler();
-        return super.onStartCommand(intent, flags, startId);
-    }
-
-    public void makeControlToast() {
-        handler.post(new Runnable() {
+    class IncrementTask {
+        int innerCounter;
+        Timer timer = new Timer();
+        TimerTask incrementTask = new TimerTask() {
             @Override
             public void run() {
-                Toast.makeText(getApplicationContext(), "Service is still working", Toast.LENGTH_SHORT).show();
+                innerCounter += 3;
             }
-        });
+        };
+
+        public IncrementTask(int count) {
+            innerCounter = count;
+            timer.schedule(incrementTask, 5000, 5000);
+        }
+
+        public int getInnerCounter() {
+            return innerCounter;
+        }
     }
-
-
 }
